@@ -13,9 +13,10 @@ void fill_strip_with_rainbow(Adafruit_NeoPixel &strip, int startingHue);
 void sparkle(Adafruit_NeoPixel &strip, int chance);
 void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset);
 void rainbow_chase(Adafruit_NeoPixel &strip, int offset);
+void eq(Adafruit_NeoPixel &strip, int chunks, int volume);
 
 int iteration = 0;
-int restart_after_iteration = 3000;
+int restart_after_iteration = 5000;
 bool testing = false;
 bool logging = false;
 
@@ -60,6 +61,11 @@ void loop() {
   } else if ( iteration < 2000 ) {
     sparkle(strip_2, 5);
     rain_effect(strip_1, 4, iteration);
+
+  } else if ( iteration < 4000 ) {
+    int volume = (iteration / 10);
+    eq(strip_1, 4, volume);
+    eq(strip_2, 4, volume);
 
   } else {  
     rainbow_chase(strip_1, iteration);
@@ -132,5 +138,40 @@ void rainbow_chase(Adafruit_NeoPixel &strip, int offset = 0) {
       color = strip.Color(0, 0, 0);
     }
     strip.setPixelColor(i, color);
+  }
+}
+
+void eq(Adafruit_NeoPixel &strip, int chunks, int volume = 0) {
+  int virtual_chunks = (chunks*2) - 1;
+  int quantized_volume = volume % (virtual_chunks + 1);
+  int strips_to_light = quantized_volume;
+  if ( quantized_volume > chunks) {
+    strips_to_light = (chunks*2) - quantized_volume;
+  }
+
+  strip.clear();
+
+  int pixels_per_chunk = strip.numPixels() / chunks;
+  int hue = (255 + volume * 2) % 255;
+  for (int chunk=0; chunk<chunks+1; chunk++) {
+    if ( chunk <= strips_to_light ) {
+      for (int pixel=0; pixel < pixels_per_chunk; pixel++) {
+        uint32_t color = hue_as_color(hue);
+        if ( random(0, 10) == 1 ) {
+          color = strip.Color(255, 255, 255);
+        }
+        strip.setPixelColor( pixel + ((chunk-1) * pixels_per_chunk), color );
+      }
+    }
+  }
+
+  if ( logging ) {
+    Serial.print("volume ");
+    Serial.print( volume );
+    Serial.print(" hue ");
+    Serial.print( hue );
+    Serial.print(" strips_to_light ");
+    Serial.print( strips_to_light );
+    Serial.println("");
   }
 }
