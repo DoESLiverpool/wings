@@ -28,8 +28,8 @@ void setup() {
   strip_1.begin();
   strip_2.begin();
 
-  strip_1.setBrightness(100);
-  strip_2.setBrightness(100);
+  strip_1.setBrightness(150);
+  strip_2.setBrightness(150);
 
   strip_1.clear();
   strip_2.clear();
