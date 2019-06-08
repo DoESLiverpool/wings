@@ -11,7 +11,7 @@ Adafruit_NeoPixel strip_2(STRIP_2_LEN, STRIP_2_PIN, NEO_GRB + NEO_KHZ800);
 uint32_t hue_as_color(int hue);
 void fill_strip_with_rainbow(Adafruit_NeoPixel &strip, int startingHue);
 void sparkle(Adafruit_NeoPixel &strip, int chance);
-void rain_effect(Adafruit_NeoPixel &strip, int drops, int offset);
+void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset);
 void rainbow_chase(Adafruit_NeoPixel &strip, int offset);
 
 int iteration = 0;
@@ -87,10 +87,10 @@ void sparkle(Adafruit_NeoPixel &strip, int chance = 10) {
   }
 }
 
-void rain_effect(Adafruit_NeoPixel &strip, int drops, int offset = 0) {
-  int drop_length = strip.numPixels() / drops;
+void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset = 0) {
+  int chunk_length = strip.numPixels() / chunks;
   int gap_between_droplets = 25;
-  for (int i=0; i<drop_length; i++) {
+  for (int i=0; i<chunk_length; i++) {
     int brightness = 0;
     int position_in_droplet = i % gap_between_droplets;
     if ( position_in_droplet == 9 ) {
@@ -100,8 +100,8 @@ void rain_effect(Adafruit_NeoPixel &strip, int drops, int offset = 0) {
     } else if ( position_in_droplet == 7 ) {
       brightness = 10;
     }
-    for (int r=0; r<drops; r++) {
-      int pixel = (r * drop_length) + i;
+    for (int r=0; r<chunks; r++) {
+      int pixel = (r * chunk_length) + i;
       int randomness = r * 17;
       strip.setPixelColor(
         (pixel + offset + randomness) % strip.numPixels(),
