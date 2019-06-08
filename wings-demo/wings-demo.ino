@@ -16,10 +16,14 @@ void rainbow_chase(Adafruit_NeoPixel &strip, int offset);
 
 int iteration = 0;
 int restart_after_iteration = 3000;
+bool testing = false;
+bool logging = false;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("setup");
+  if ( logging ) {
+    Serial.begin(9600);
+    Serial.println("setup");
+  }
 
   strip_1.begin();
   strip_2.begin();
@@ -32,16 +36,24 @@ void setup() {
 
   strip_1.show();
   strip_2.show();
-  
-  Serial.println("setup complete");
+
+  if ( logging ) {
+    Serial.println("setup complete");
+  }
 }
 
 void loop() {
-//  Serial.print("iteration ");
-//  Serial.println(iteration);
+  if ( logging ) {
+    Serial.print("iteration ");
+    Serial.println(iteration);
+  }
+
+  if ( testing ) {
+    
+  }
 
   // Cycle through the different animations.
-  if ( iteration < 500 ) {
+  else if ( iteration < 500 ) {
     fill_strip_with_rainbow(strip_1, iteration * -2);
     fill_strip_with_rainbow(strip_2, iteration * -2);
 
