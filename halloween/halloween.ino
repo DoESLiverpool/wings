@@ -8,19 +8,26 @@
 Adafruit_NeoPixel strip_1(STRIP_1_LEN, STRIP_1_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel strip_2(STRIP_2_LEN, STRIP_2_PIN, NEO_GRB + NEO_KHZ800);
 
-uint32_t hue_as_color(int hue);
-void fill_strip_with_rainbow(Adafruit_NeoPixel &strip, int startingHue = 0);
-void sparkle(Adafruit_NeoPixel &strip, int chance = 10);
-void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset = 0);
-void rainbow_chase(Adafruit_NeoPixel &strip, int offset = 0);
-void eq(Adafruit_NeoPixel &strip, int chunks, int volume = 0);
+// Function prototypes
+uint32_t halloween_color(int index);
+void fill_strip_halloween(Adafruit_NeoPixel &strip, int offset);
+void sparkle(Adafruit_NeoPixel &strip, int chance);
+void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset);
+void halloween_chase(Adafruit_NeoPixel &strip, int offset);
+void eq_halloween(Adafruit_NeoPixel &strip, int chunks, int volume);
 
 int iteration = 0;
 int restart_after_iteration = 5000;
+
 bool testing = false;
 bool logging = false;
 
 void setup() {
+  if (logging) {
+    Serial.begin(9600);
+    Serial.println("setup");
+  }
+
   strip_1.begin();
   strip_2.begin();
 
@@ -29,156 +36,165 @@ void setup() {
 
   strip_1.clear();
   strip_2.clear();
+
   strip_1.show();
   strip_2.show();
+
+  if (logging) Serial.println("setup complete");
 }
 
+// ============================================================
+//                          MAIN LOOP
+// ============================================================
 void loop() {
+
   if (iteration < 500) {
-    fill_strip_with_rainbow(strip_1, iteration * -2);
-    fill_strip_with_rainbow(strip_2, iteration * -2);
+    fill_strip_halloween(strip_1, iteration);
+    fill_strip_halloween(strip_2, iteration);
 
   } else if (iteration < 2000) {
-    sparkle(strip_2, 6);
+    sparkle(strip_2, 5);
     rain_effect(strip_1, 4, iteration);
 
   } else if (iteration < 4000) {
     int volume = iteration / 10;
-    eq(strip_1, 4, volume);
-    eq(strip_2, 4, volume);
+    eq_halloween(strip_1, 4, volume);
+    eq_halloween(strip_2, 4, volume);
 
   } else {
-    rainbow_chase(strip_1, iteration);
-    rainbow_chase(strip_2, iteration);
+    halloween_chase(strip_1, iteration);
+    halloween_chase(strip_2, iteration);
   }
 
   strip_1.show();
   strip_2.show();
 
-  iteration = (iteration < restart_after_iteration) ? iteration + 1 : 0;
+  if (iteration < restart_after_iteration) iteration++;
+  else iteration = 0;
 }
 
-// ------------------------------------------------------------
-// MAP HUE 0–255 → HALLOWEEN PALETTE (orange → yellow → green)
-// ------------------------------------------------------------
-uint32_t hue_as_color(int hue) {
-  int startHue = 5000;     // Orange / pumpkin
-  int endHue   = 22000;    // Slime-green
-  int mappedHue = map(hue % 255, 0, 255, startHue, endHue);
-  return strip_1.gamma32(strip_1.ColorHSV(mappedHue));
+// ============================================================
+//                 HALLOWEEN COLOR PALETTE
+// ============================================================
+//
+// Returns ORANGE → PURPLE → GREEN cycling
+//
+uint32_t halloween_color(int index) {
+  int mode = index % 3;
+
+  switch (mode) {
+    case 0:  // ORANGE
+      return strip_1.Color(255, 80, 0);
+    case 1:  // PURPLE
+      return strip_1.Color(160, 0, 255);
+    case 2:  // SLIME GREEN
+      return strip_1.Color(0, 255, 40);
+  }
+  return strip_1.Color(0, 0, 0);
 }
 
-// ------------------------------------------------------------
-void fill_strip_with_rainbow(Adafruit_NeoPixel &strip, int startingHue) {
+// ============================================================
+//         HALLOWEEN “RAINBOW” (Orange / Purple / Green)
+// ============================================================
+void fill_strip_halloween(Adafruit_NeoPixel &strip, int offset) {
   for (int i = 0; i < strip.numPixels(); i++) {
-    int hue = (startingHue + i * 4) % 256;
-    strip.setPixelColor(i, hue_as_color(hue));
+    int index = (i + offset / 4) % 300;
+    int colorIndex = index % 90;  // 30 pixels per color range
+
+    if (colorIndex < 30)
+      strip.setPixelColor(i, halloween_color(0)); // orange
+    else if (colorIndex < 60)
+      strip.setPixelColor(i, halloween_color(1)); // purple
+    else
+      strip.setPixelColor(i, halloween_color(2)); // green
   }
 }
 
-// ------------------------------------------------------------
-// FLICKER LIKE CANDLES / EMBERS — NO WHITE
-// ------------------------------------------------------------
+// ============================================================
+//                      SPARKLE EFFECT
+// ============================================================
 void sparkle(Adafruit_NeoPixel &strip, int chance) {
   for (int i = 0; i < strip.numPixels(); i++) {
     if (random(0, 100) < chance) {
-      strip.setPixelColor(i, hue_as_color(random(140, 255)));
+      strip.setPixelColor(i, halloween_color(random(0,3)));
     } else {
       strip.setPixelColor(i, 0, 0, 0);
     }
   }
 }
 
-// ------------------------------------------------------------
-// GHOSTLY RAINDROPS USING HALLOWEEN PALETTE
-// ------------------------------------------------------------
+// ============================================================
+//                      RAIN EFFECT
+// ============================================================
 void rain_effect(Adafruit_NeoPixel &strip, int chunks, int offset) {
   int chunk_length = strip.numPixels() / chunks;
-  int gap = 25;
 
   for (int i = 0; i < chunk_length; i++) {
     int brightness = 0;
-    int pos = i % gap;
+    int pos = i % 20;
 
-    if (pos == 9) brightness = 255;
-    else if (pos == 8) brightness = 100;
-    else if (pos == 7) brightness = 40;
+    if (pos == 5) brightness = 255;
+    else if (pos == 4) brightness = 80;
+    else if (pos == 3) brightness = 40;
 
     for (int r = 0; r < chunks; r++) {
       int pixel = (r * chunk_length) + i;
-      int hue = (offset + i * 6 + r * 10) % 256;
+      uint32_t base = halloween_color((i + r + offset / 30) % 3);
 
-      uint32_t baseColor = hue_as_color(hue);
-      uint8_t rr = (baseColor >> 16) & 0xFF;
-      uint8_t gg = (baseColor >> 8) & 0xFF;
-      uint8_t bb = baseColor & 0xFF;
+      uint8_t R = ((base >> 16) & 0xFF) * brightness / 255;
+      uint8_t G = ((base >> 8) & 0xFF) * brightness / 255;
+      uint8_t B = (base & 0xFF) * brightness / 255;
 
-      strip.setPixelColor(
-        (pixel + offset + r * 17) % strip.numPixels(),
-        strip.Color(rr * brightness / 255, gg * brightness / 255, bb * brightness / 255)
-      );
+      strip.setPixelColor((pixel + offset) % strip.numPixels(), strip.Color(R,G,B));
     }
   }
 }
 
-// ------------------------------------------------------------
-// EMBER / GHOST-CHASE WITH FADE-OUT TRAIL
-// ------------------------------------------------------------
-void rainbow_chase(Adafruit_NeoPixel &strip, int offset) {
-  int numPixels = strip.numPixels();
-  int tail = 10;
+// ============================================================
+//                HALLOWEEN CHASE (with glow)
+// ============================================================
+void halloween_chase(Adafruit_NeoPixel &strip, int offset) {
+  int num = strip.numPixels();
+  int head = offset % num;
+  int tail = 8;
 
-  for (int i = 0; i < numPixels; i++) {
-    int head = (offset / 2) % numPixels;
-    int dist = (i - head + numPixels) % numPixels;
+  for (int i = 0; i < num; i++) {
+    int dist = (i - head + num) % num;
 
     if (dist < tail) {
       float fade = 1.0 - (float)dist / tail;
 
-      int hue = (offset / 4 + i * 3 - dist * 10 + 256) % 256;
+      uint32_t c = halloween_color((offset / 10 + dist) % 3);
 
-      uint32_t base = hue_as_color(hue);
-      uint8_t r = ((base >> 16) & 0xFF) * fade;
-      uint8_t g = ((base >> 8) & 0xFF) * fade;
-      uint8_t b = (base & 0xFF) * fade;
+      uint8_t R = ((c >> 16) & 0xFF) * fade;
+      uint8_t G = ((c >> 8) & 0xFF) * fade;
+      uint8_t B = (c & 0xFF) * fade;
 
-      strip.setPixelColor(i, strip.Color(r, g, b));
+      strip.setPixelColor(i, strip.Color(R,G,B));
     } else {
       strip.setPixelColor(i, 0, 0, 0);
     }
   }
 }
 
-// ------------------------------------------------------------
-// HALLOWEEN FLAME-STYLE EQ BARS
-// ------------------------------------------------------------
-void eq(Adafruit_NeoPixel &strip, int chunks, int volume) {
-  int virtual_chunks = chunks * 2 - 1;
-  int quantized = volume % (virtual_chunks + 1);
-
-  int bars_to_light = (quantized > chunks)
-                        ? (chunks * 2 - quantized)
-                        : quantized;
+// ============================================================
+//                   HALLOWEEN EQ BAR GRAPH
+// ============================================================
+void eq_halloween(Adafruit_NeoPixel &strip, int chunks, int volume) {
+  int virtual_chunks = (chunks * 2) - 1;
+  int quant = volume % (virtual_chunks + 1);
+  int lit = quant > chunks ? (chunks * 2) - quant : quant;
 
   strip.clear();
 
   int pixels_per_chunk = strip.numPixels() / chunks;
 
   for (int chunk = 0; chunk < chunks; chunk++) {
-    if (chunk < bars_to_light) {
+    if (chunk < lit) {
       for (int p = 0; p < pixels_per_chunk; p++) {
-
-        int pixelIndex = chunk * pixels_per_chunk + p;
-
-        int hue = map(pixelIndex, 0, strip.numPixels(), 0, 255);
-        uint32_t color = hue_as_color(hue);
-
-        // occasional flicker highlight
-        if (random(0, 20) == 1) {
-          color = hue_as_color(random(160, 255));
-        }
-
-        strip.setPixelColor(pixelIndex, color);
+        int idx = (chunk * pixels_per_chunk + p + volume / 3);
+        uint32_t color = halloween_color(idx % 3);
+        strip.setPixelColor(chunk * pixels_per_chunk + p, color);
       }
     }
   }
